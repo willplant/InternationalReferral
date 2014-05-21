@@ -1,0 +1,329 @@
+<div class="news-list news-section content">
+		<div class="title">Custom sections</div>
+	</div>
+	<div class="row" id="add_content">
+		<div class="explain-content">
+			You can add your own special sections if you want to. If you have specific interests or a specific skillset you may write about it as much as you want. Fill in the title - and then press "Add new section".
+		</div>
+		<div class="input-append">
+			<div class="input-box">
+				<label>Section title:</label>
+				<input class="input-setting" type="text" name="content_add" placeholder="ex. Awards, Education, Philanthropy" value="">
+			</div>
+			<button type="button" class="btn btn-primary content-add submit">Add new section +</button>
+		</div>
+	</div>
+	<div id="content_main_container">
+		<!-- Hidden template -->
+		<div class="row hidden-section content-container hide" id="content_template">
+			<!-- Section start -->
+			 <div class="news-list news-section">
+				<div class="title content-heading">Content</div>
+			</div>
+
+			<div class="row-navbar">
+				@foreach($language_codes as $lang)
+					@if($lang->two_letter != "en")
+					<button type="button" class="lang-add submit" data-lang="{{ $lang->two_letter }}">Add {{ $lang->english_name }} +</button>
+					@else
+					<button type="button" class="lang-add submit hide" data-lang="{{ $lang->two_letter }}">Add {{ $lang->english_name }} +</button>
+					@endif
+				@endforeach
+				<div class="pull-right content-removable-section">
+					<button type="button" class="content-section-remove1 submit">Remove section <i class="icon-plus-sign icon-white"></i></button>
+				</div>
+			</div>
+				<?php
+				{
+					// Output a template for new content (in all languages). This will be copied by javascript at a later stage.
+					$i = 0;
+					foreach($language_codes as $lang):
+
+						$xtend = '';
+						if ($i > 0) $xtend = ' input-boxes-right';
+
+						// Display the default language English by default
+						$action 	= "add";
+						$hide 		= "";
+						if($lang->two_letter != "en")
+						{
+							$action 	= "none";
+							$hide 		= " hide";
+						}
+				?>
+				<div class="content_container_{{ $lang->two_letter }} input-boxes<?php echo $xtend; echo $hide; ?>">
+					<div class="title-float">{{ $lang->english_name }}
+						<button type="button" class="lang-remove1 submit-small" data-lang="{{ $lang }}">Remove translation -</button>
+					</div>
+
+					<!-- Title -->
+					<div class="input-box">
+						<label>Title:</label>
+						<input class="lang-input-field input-field-title input-setting" type="text" data-type="2array" data-lang="{{ $lang->two_letter }}" data-name="content_title">
+					</div>
+
+					<!-- Content text -->
+					<div class="input-box">
+						<label>Text:</label>
+						<textarea class="lang-input-field" data-type="2array" data-lang="{{ $lang->two_letter }}" data-name="content_text" rows="15"></textarea>
+					</div>		
+
+					<!-- Hidden content data  -->
+					<div>
+                        <input class="lang-input-field" type="hidden" data-type="2array" data-lang="{{ $lang->two_letter }}" 	data-name="content_action" 	value="{{ $action }}">
+						<input class="lang-input-field" type="hidden" data-type="2array" data-lang="{{ $lang->two_letter }}" 	data-name="content_lang" 	value="{{ $lang->two_letter }}">
+                    </div>					
+				</div>
+				<?php
+					$i++;
+					endforeach;
+				}
+				?>
+
+				<!-- Hidden section data -->
+				<div>
+					<input class="lang-input-field" type="hidden" data-type="1array" data-name="section_type" value="removable">
+					<input class="lang-input-field" type="hidden" data-type="1array" data-name="section_action" 	value="none">
+				</div>
+
+				<div class="save-row">
+					<input type="submit" value="Save" class="submit" />
+				</div>
+				<!-- Section end -->
+			</div>
+
+                <?php
+				// Output data saved in database
+                if(count(Input::old('section_action')) == 0)
+                {
+                    for($i = 0; $i < count($member->content); $i++)
+                    {
+						// Pre-load all content
+						$section_content = array();
+						foreach($member->content[$i]->content as $c)
+						{
+							$section_content['id']			= $member->content[$i]->id;
+							$section_content[$c->language] 	= $c;
+						}
+
+						// Pre set variables for nicer html
+						$heading = array_key_exists('en', $section_content) ? $section_content['en']->heading : $section_content['es']->heading;
+
+						// Define content type, removable = can be deleted, non-removable = cannot be deleted (ex. biography)
+						$section_type = "removable";
+						if($i == 0) // Biography
+							$section_type = "non-removable";
+                ?>
+					@if($i == 0) {{-- Reserve spot 0 for biography --}}
+                    <div class="row content-container content-type-biography">
+					@else
+                    <div class="row content-container">
+					@endif
+						<!-- Section start -->
+						<div class="news-list news-section content">
+							<div class="title">{{ $heading }}</div>
+						</div>
+
+						<div class="row-navbar">
+							<?php
+							$language_names = array();	// Used for naming of database-read data
+							$l 				= 0;		// Counter for the loop below
+							foreach($language_codes as $language):
+								$identifier 							= $i . '.' . $language->two_letter; // Used for identifying Input name
+								$language_names[$language->two_letter] 	= $language->english_name;
+							?>
+							
+							@if(array_key_exists($language->two_letter, $section_content))
+							<button type="button" class="lang-add hide submit" data-lang="{{ $language->two_letter }}">Add {{ $language->english_name }} +</button>
+							@else
+							<button type="button" class="lang-add submit" data-lang="{{ $language->two_letter }}">Add {{ $language->english_name }} +</button>
+							@endif
+							<?php endforeach; ?>
+							@if($i > 0)
+							<button type="button" class="content-section-remove1 submit">Remove section <i class="icon-plus-sign icon-white"></i></button>
+							@endif
+						</div>
+
+                        <?php
+						$customindex = 0;
+						
+                        foreach($language_codes as $language):
+                            $lang 			= $language->two_letter;
+                            $identifier 	= $i . '.' . $lang;			// Identifier for Input array, ex. Input::old('content_action.1.en')
+
+							$xtend = '';
+							if ($customindex > 0) $xtend = ' input-boxes-right';
+							
+							$hasLanguage = array_key_exists($lang, $section_content);
+
+							// Pre definitions
+							$hide 			= " hide";
+							$content_action = "none";
+							$heading		= "";
+							$content_text 	= "";
+							$content_id		= "";
+
+							// Check if section has translated content
+							if($hasLanguage)
+							{
+								// Visuals
+								$hide 			= "";
+
+								// Update existing data
+								$content_action = "update";
+
+								// Database content
+								$heading		= $section_content[$lang]->heading;
+								$content_text	= $section_content[$lang]->content;
+
+								$content_id		= $section_content[$lang]->id;
+							}
+                        ?>
+						<div class="content_container_{{ $lang }} input-boxes<?php echo $xtend; echo $hide; ?>">
+							<div class="title-float">{{ $language->english_name }}
+								<button type="button" class="btn btn-danger lang-remove1 submit-small" data-lang="{{ $lang }}">Remove translation -</button>
+							</div>
+							<!-- Title -->
+							<div class="input-box">
+								<label>Title:</label>
+								<input class="input-xxlarge lang-input-field input-field-title input-setting" type="text" data-type="2array" data-lang="{{ $lang }}" data-name="content_title" value="{{ $heading }}">
+							</div>
+							<!-- Content text -->
+							<div class="input-box">
+								<label>Text:</label>
+								<textarea class="input-xxlarge lang-input-field wysi" data-type="2array" data-lang="{{ $lang }}" data-name="content_text" rows="15">{{ $content_text }}</textarea>
+							</div>							
+						</div>
+
+						<!-- Hidden content data -->
+						<div>
+							<input class="lang-input-field" type="hidden" data-type="2array" data-lang="{{ $lang }}" 	data-name="content_id" 			value="{{ $content_id }}">
+							<input class="lang-input-field" type="hidden" data-type="2array" data-lang="{{ $lang }}" 	data-name="content_lang" 		value="{{ $lang }}">
+							<input class="lang-input-field" type="hidden" data-type="2array" data-lang="{{ $lang }}" 	data-name="content_action" 		value="{{ $content_action }}">
+						</div>
+					<?php 
+					$customindex++; 
+					endforeach; 
+					?>
+
+					<!-- Hidden section data -->
+					<div>
+						<input class="lang-input-field" type="hidden" data-type="1array" 	data-name="section_id" 			value="{{ $member->content[$i]->id }}">
+						<input class="lang-input-field" type="hidden" data-type="1array" 	data-name="section_type" 		value="{{ $section_type }}">
+						<input class="lang-input-field" type="hidden" data-type="1array" 	data-name="section_action" 		value="update">
+					</div>
+						
+					<div class="save-row">
+						<input type="submit" value="Save" class="submit" />
+					</div>
+					<!-- Section end -->
+				</div>
+                <?php
+                    // End loaded data loop
+                    }
+                }
+                else // Handle old input
+                {
+                    for($i = 0; $i < count(Input::old('section_action')); $i++)
+                    {
+                    ?>
+                    @if($i == 0) {{-- Reserve spot 0 for biography --}}
+                    <div class="row content-container content-type-biography">
+					@else
+                    <div class="row content-container">
+					@endif
+						<!-- Section start -->
+						<div class="news-list news-section content">
+							<div class="title">{{ Input::old('content_title.' . $i . '.en') }}</div>
+						</div>
+
+						@if(Input::old('section_action.' . $i) == 'add' || Input::old('section_action.' . $i) == 'update')
+                        <div class="row-navbar">
+                            <?php
+                            foreach($language_codes as $language):
+                                $identifier = $i . '.' . $language->two_letter;
+
+                                // Display the default language English by default
+                                $hide = "";
+                                if(Input::old('content_action.' . $identifier) == "add" ||
+                                   Input::old('content_action.' . $identifier) == "update")
+                                {
+                                    $hide = " hide";
+                                }
+                            ?>
+							<button type="button" class="lang-add{{ $hide }} submit" data-lang="{{ $language->two_letter }}">Add {{ $language->english_name }} +</button>
+	                        <?php endforeach; ?>
+	                        @if(Input::old('section_type.' . $i) == "removable")
+							<button type="button" class="content-section-remove1 submit">Remove section <i class="icon-plus-sign icon-white"></i></button>
+	                        @endif
+                        </div>
+
+                        <?php
+						$customindex = 0;
+                        foreach($language_codes as $language):
+                            $lang       = $language->two_letter;
+                            $identifier = $i . '.' . $lang;
+
+                            $xtend = '';
+							if ($customindex > 0) $xtend = ' input-boxes-right';
+
+                            $hide = "";
+                            if(Input::old('content_action.' . $identifier) != "add" &&
+                               Input::old('content_action.' . $identifier) != "update")
+                            {
+                                $hide = " hide";
+                            }
+                        ?>
+                            <div class="content_container_{{ $lang }} input-boxes<?php echo $xtend; echo $hide; ?>">
+								<div class="title-float">{{ $language->english_name }}
+									<button type="button" class="btn btn-danger lang-remove1 submit-small" data-lang="{{ $lang }}">Remove translation -</button>
+								</div>
+
+                                <!-- Title -->
+								<div class="input-box">
+									<label>Title:</label>
+									<input class="input-xxlarge lang-input-field input-field-title input-setting" type="text" data-type="2array" data-lang="{{ $lang }}" data-name="content_title" value="{{ Input::old('content_title.' . $identifier) }}">
+								</div>
+								<!-- Content text -->
+								<div class="input-box">
+									<label>Text:</label>
+									<textarea class="input-xxlarge lang-input-field wysi" data-type="2array" data-lang="{{ $lang }}" data-name="content_text" rows="15">{{ Input::old('content_text.' . $identifier) }}</textarea>
+								</div>							
+							</div>
+
+                        	<!-- Hidden content data -->
+							<div>
+								<input class="lang-input-field" type="hidden" data-type="2array" data-lang="{{ $lang }}" 	data-name="content_id" 			value="{{ Input::old('content_id.' . $identifier) }}">
+								<input class="lang-input-field" type="hidden" data-type="2array" data-lang="{{ $lang }}" 	data-name="content_lang" 		value="{{ Input::old('content_lang.' . $identifier) }}">
+								<input class="lang-input-field" type="hidden" data-type="2array" data-lang="{{ $lang }}" 	data-name="content_action" 		value="{{ Input::old('content_action.' . $identifier) }}">
+							</div>
+						<!-- </div> -->
+                        <?php
+                        $customindex++;
+						endforeach;
+						endif; 		// if(section_action != remove)
+						?>
+						<!-- Hidden section data -->
+						<div>
+							<input class="lang-input-field" type="hidden" data-type="1array" 	data-name="section_id" 			value="{{ Input::old('section_id.' . $i) }}">
+							<input class="lang-input-field" type="hidden" data-type="1array" 	data-name="section_type" 		value="{{ Input::old('section_type.' . $i) }}">
+							<input class="lang-input-field" type="hidden" data-type="1array" 	data-name="section_action" 		value="{{ Input::old('section_action.' . $i) }}">
+						</div>
+							
+						<div class="save-row">
+							<input type="submit" value="Save" class="submit" />
+						</div>
+						
+						<!-- Section end -->
+					</div>
+                <?php
+                    // End for-loop
+                    }
+                }
+                ?>
+               </div>
+				<!-- end of content_container -->
+
+		<div class="news-list news-section">
+			<div class="title">Links</div>
+		</div>
